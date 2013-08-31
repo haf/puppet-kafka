@@ -40,40 +40,57 @@
 #                                     package version.  If you override this,
 #                                     the version must be >= 0.8.  Default: installed.
 class kafka(
-    $hosts                           = $kafka::defaults::hosts,
+  $hosts                           = $kafka::params::hosts,
 
-    $zookeeper_hosts                 = $kafka::defaults::zookeeper_hosts,
-    $zookeeper_connection_timeout_ms = $kafka::defaults::zookeeper_connection_timeout_ms,
-    $zookeeper_chroot                = $kafka::defaults::zookeeper_chroot,
+  $zookeeper_hosts                 = $kafka::params::zookeeper_hosts,
+  $zookeeper_connection_timeout_ms = $kafka::params::zookeeper_connection_timeout_ms,
+  $zookeeper_chroot                = $kafka::params::zookeeper_chroot,
 
-    $kafka_log_file                  = $kafka::defaults::kafka_log_file,
-    $producer_type                   = $kafka::defaults::producer_type,
-    $producer_batch_num_messages     = $kafka::defaults::producer_batch_num_messages,
-    $consumer_group_id               = $kafka::defaults::consumer_group_id,
+  $kafka_log_file                  = $kafka::params::kafka_log_file,
+  $producer_type                   = $kafka::params::producer_type,
+  $producer_batch_num_messages     = $kafka::params::producer_batch_num_messages,
+  $consumer_group_id               = $kafka::params::consumer_group_id,
 
-    $version                         = $kafka::defaults::version,
+  $version                         = $kafka::params::version,
 
-    $producer_properties_template    = $kafka::defaults::producer_properties_template,
-    $consumer_properties_template    = $kafka::defaults::consumer_properties_template,
-    $log4j_properties_template       = $kafka::defaults::log4j_properties_template
-) inherits kafka::defaults
+  $producer_properties_template    = $kafka::params::producer_properties_template,
+  $consumer_properties_template    = $kafka::params::consumer_properties_template,
+  $log4j_properties_template       = $kafka::params::log4j_properties_template
+) inherits kafka::params
 {
-    package { 'kafka':
-        ensure => $version,
-    }
+  package { 'kafka':
+    ensure => $version,
+  }
 
-    file { '/etc/kafka/producer.properties':
-        content => template($producer_properties_template),
-        require => Package['kafka'],
-    }
+  file { '/etc/kafka':
+    ensure  => directory,
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0755',
+    require => Package['kafka'],
+  }
 
-    file { '/etc/kafka/consumer.properties':
-        content => template($consumer_properties_template),
-        require => Package['kafka'],
-    }
+  file { '/etc/kafka/producer.properties':
+    content => template($producer_properties_template),
+    require => [
+      Package['kafka'],
+      File['/etc/kafka']
+    ],
+  }
 
-    file { '/etc/kafka/log4j.properties':
-        content => template($log4j_properties_template),
-        require => Package['kafka'],
-    }
+  file { '/etc/kafka/consumer.properties':
+    content => template($consumer_properties_template),
+    require => [
+      Package['kafka'],
+      File['/etc/kafka']
+    ],
+  }
+
+  file { '/etc/kafka/log4j.properties':
+    content => template($log4j_properties_template),
+    require => [
+      Package['kafka'],
+      File['/etc/kafka']
+    ],
+  }
 }

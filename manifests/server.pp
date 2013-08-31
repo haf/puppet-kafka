@@ -55,92 +55,93 @@
 # $metrics_dir                 - Directory in which to store metrics CSVs.  Default: undef (metrics disabled)
 #
 class kafka::server(
-    $enabled                         = true,
-    $log_dir                         = $kafka::defaults::log_dir,
-    $jmx_port                        = $kafka::defaults::jmx_port,
-    $num_partitions                  = $kafka::defaults::num_partitions,
+  $enabled                         = true,
+  $log_dir                         = $kafka::params::log_dir,
+  $home_dir                        = $kafka::params::home_dir,
+  $jmx_port                        = $kafka::params::jmx_port,
+  $num_partitions                  = $kafka::params::num_partitions,
 
-    $num_network_threads             = $kafka::defaults::num_network_threads,
-    $num_io_threads                  = $kafka::defaults::num_io_threads,
-    $socket_send_buffer_bytes        = $kafka::defaults::socket_send_buffer_bytes,
-    $socket_receive_buffer_bytes     = $kafka::defaults::socket_receive_buffer_bytes,
-    $socket_request_max_bytes        = $kafka::defaults::socket_request_max_bytes,
+  $num_network_threads             = $kafka::params::num_network_threads,
+  $num_io_threads                  = $kafka::params::num_io_threads,
+  $socket_send_buffer_bytes        = $kafka::params::socket_send_buffer_bytes,
+  $socket_receive_buffer_bytes     = $kafka::params::socket_receive_buffer_bytes,
+  $socket_request_max_bytes        = $kafka::params::socket_request_max_bytes,
 
-    $log_flush_interval_messages     = $kafka::defaults::log_flush_interval_messages,
-    $log_flush_interval_ms           = $kafka::defaults::log_flush_interval_ms,
-    $log_retention_hours             = $kafka::defaults::log_retention_hours,
-    $log_retention_bytes             = $kafka::defaults::log_retention_bytes,
-    $log_segment_bytes               = $kafka::defaults::log_segment_bytes,
+  $log_flush_interval_messages     = $kafka::params::log_flush_interval_messages,
+  $log_flush_interval_ms           = $kafka::params::log_flush_interval_ms,
+  $log_retention_hours             = $kafka::params::log_retention_hours,
+  $log_retention_bytes             = $kafka::params::log_retention_bytes,
+  $log_segment_bytes               = $kafka::params::log_segment_bytes,
 
-    $log_cleanup_interval_mins       = $kafka::defaults::log_cleanup_interval_mins,
-    $log_cleanup_policy              = $kafka::defaults::log_cleanup_policy,
+  $log_cleanup_interval_mins       = $kafka::params::log_cleanup_interval_mins,
+  $log_cleanup_policy              = $kafka::params::log_cleanup_policy,
 
-    $metrics_dir                     = $kafka::defaults::metrics_dir,
+  $metrics_dir                     = $kafka::params::metrics_dir,
 
-    $server_properties_template      = $kafka::defaults::server_properties_template,
-    $default_template                = $kafka::defaults::default_template
-) inherits kafka::defaults
+  $server_properties_template      = $kafka::params::server_properties_template,
+  $default_template                = $kafka::params::default_template
+) inherits kafka::params
 {
-    # kafka class must be included before kafka::servver
-    Class['kafka'] -> Class['kafka::server']
+  # kafka class must be included before kafka::servver
+  Class['kafka'] -> Class['kafka::server']
 
-    # define local variables from kafka class for use in ERb template.
-    $zookeeper_hosts                 = $kafka::zookeeper_hosts
-    $zookeeper_connection_timeout_ms = $kafka::zookeeper_connection_timeout_ms
-    $zookeeper_chroot                = $kafka::zookeeper_chroot
+  # define local variables from kafka class for use in ERb template.
+  $zookeeper_hosts                 = $kafka::zookeeper_hosts
+  $zookeeper_connection_timeout_ms = $kafka::zookeeper_connection_timeout_ms
+  $zookeeper_chroot                = $kafka::zookeeper_chroot
 
     # Get this broker's id and port out of the $kafka::hosts configuration hash
-    $broker_id   = $kafka::hosts[$::fqdn]['id']
+  $broker_id = $kafka::hosts[$::fqdn]['id']
 
-    # Using a conditional assignment selector with a
-    # Hash value results in a puppet syntax error.
-    # Using an if/else instead.
-    if ($kafka::hosts[$::fqdn]['port']) {
-        $broker_port = $kafka::hosts[$::fqdn]['port']
-    }
-    else {
-        $broker_port = $kafka::defaults::default_broker_port
-    }
+  # Using a conditional assignment selector with a
+  # Hash value results in a puppet syntax error.
+  # Using an if/else instead.
+  if ($kafka::hosts[$::fqdn]['port']) {
+    $broker_port = $kafka::hosts[$::fqdn]['port']
+  }
+  else {
+    $broker_port = $kafka::params::default_broker_port
+  }
 
-    file { '/etc/default/kafka':
-        content => template($default_template)
-    }
-    file { '/etc/kafka/server.properties':
-        content => template($server_properties_template),
-    }
-
-    file { $log_dir:
-        ensure  => 'directory',
-        owner   => 'kafka',
-        group   => 'kafka',
-        mode    => '0755',
-    }
+  file { '/etc/default/kafka':
+    content => template($default_template)
+  }
+  file { '/etc/kafka/server.properties':
+    content => template($server_properties_template),
+  }
 
     # If we are using Kafka Metrics Reporter, ensure
     # that the $metrics_dir exists.
-    if ($metrics_dir and !defined(File[$metrics_dir])) {
-        file { $metrics_dir:
-            ensure  => 'directory',
-            owner   => 'kafka',
-            group   => 'kafka',
-            mode    => '0755',
-        }
+  if $metrics_dir {
+    file { $metrics_dir:
+      ensure  => 'directory',
+      owner   => 'kafka',
+      group   => 'kafka',
+      mode    => '0755',
     }
+  }
 
-    # Start the Kafka server.
-    # We don't want to subscribe to the config files here.
-    # It will be better to manually restart Kafka when
-    # the config files changes.
-    $kafka_ensure = $enabled ? {
-        false   => 'stopped',
-        default => 'running',
-    }
-    service { 'kafka':
-        ensure     => $kafka_ensure,
-        require    => [
-            File['/etc/kafka/server.properties'],
-            File['/etc/default/kafka'],
-            File[$log_dir]
-        ],
-    }
+  # Start the Kafka server.
+  # We don't want to subscribe to the config files here.
+  # It will be better to manually restart Kafka when
+  # the config files changes.
+  $kafka_ensure = $enabled ? {
+    false   => 'stopped',
+    default => 'running',
+  }
+
+  svcutils::mixsvc { 'kafka':
+    ensure      => $kafka_ensure,
+    enable      => true,
+    user        => 'kafka',
+    group       => 'kafka',
+    log_dir     => $log_dir,
+    home        => $home_dir,
+    exec        => "${home_dir}/bin/kafka-server-start.sh /etc/kafka/server.properties",
+    description => 'Kafka Node',
+    require     => [
+      File['/etc/kafka/server.properties'],
+      File['/etc/default/kafka']
+    ],
+  }
 }
