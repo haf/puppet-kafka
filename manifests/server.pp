@@ -139,6 +139,7 @@ class kafka::server(
     home        => $home_dir,
     exec        => "${home_dir}/bin/kafka-server-start.sh /etc/kafka/server.properties",
     description => 'Kafka Node',
+    environment => 'SCALA_VERSION="2.9.2"',
     require     => [
       File['/etc/kafka/server.properties'],
       File['/etc/default/kafka']
