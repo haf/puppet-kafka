@@ -55,42 +55,87 @@ class kafka(
 
   $producer_properties_template    = $kafka::params::producer_properties_template,
   $consumer_properties_template    = $kafka::params::consumer_properties_template,
-  $log4j_properties_template       = $kafka::params::log4j_properties_template
+  $log4j_properties_template       = $kafka::params::log4j_properties_template,
+  $user                            = $kafka::params::user,
+  $group                           = $kafka::params::group,
+  $home                            = $kafka::params::home_dir
 ) inherits kafka::params
 {
+  anchor { 'kafka::start': }
+
   package { 'kafka':
     ensure => $version,
+    require => Anchor['kafka::start'],
+    before  => Anchor['kafka::end'],
+  }
+
+  group { $group:
+    ensure => present,
+    system => true,
+    require => Anchor['kafka::start'],
+    before  => Anchor['kafka::end'],
+  }
+
+  svcutils::svcuser { $user:
+    home    => $home,
+    group   => $group,
+    require => [
+      Group[$group],
+      Anchor['kafka::start']
+    ],
+    before  => Anchor['kafka::end'],
+  }
+
+  file { '/var/log/kafka':
+    ensure  => directory,
+    owner   => $user,
+    group   => $group,
+    mode    => '0644',
+    require => Anchor['kafka::start'],
+    before  => Anchor['kafka::end'],
   }
 
   file { '/etc/kafka':
     ensure  => directory,
     owner   => 'root',
     group   => 'root',
-    mode    => '0755',
-    require => Package['kafka'],
+    mode    => '0644',
+    require => [
+      Package['kafka'],
+      Anchor['kafka::start']
+    ],
+    before  => Anchor['kafka::end'],
   }
 
   file { '/etc/kafka/producer.properties':
     content => template($producer_properties_template),
     require => [
       Package['kafka'],
-      File['/etc/kafka']
+      File['/etc/kafka'],
+      Anchor['kafka::start']
     ],
+    before  => Anchor['kafka::end'],
   }
 
   file { '/etc/kafka/consumer.properties':
     content => template($consumer_properties_template),
     require => [
       Package['kafka'],
-      File['/etc/kafka']
+      File['/etc/kafka'],
+      Anchor['kafka::start']
     ],
+    before  => Anchor['kafka::end'],
   }
 
   file { '/etc/kafka/log4j.properties':
     content => template($log4j_properties_template),
     require => [
       Package['kafka'],
-      File['/etc/kafka']
+      File['/etc/kafka'],
+      Anchor['kafka::start']
     ],
+    before  => Anchor['kafka::end'],
   }
+
+  anchor { 'kafka::end': }
 }

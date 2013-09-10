@@ -89,6 +89,8 @@ class kafka::server(
   $zookeeper_hosts                 = $kafka::zookeeper_hosts
   $zookeeper_connection_timeout_ms = $kafka::zookeeper_connection_timeout_ms
   $zookeeper_chroot                = $kafka::zookeeper_chroot
+  $user                            = $kafka::user
+  $group                           = $kafka::group
 
     # Get this broker's id and port out of the $kafka::hosts configuration hash
   $broker_id = $kafka::hosts[$::fqdn]['id']
@@ -115,8 +117,8 @@ class kafka::server(
   if $metrics_dir {
     file { $metrics_dir:
       ensure  => 'directory',
-      owner   => 'kafka',
-      group   => 'kafka',
+      owner   => $user,
+      group   => $group,
       mode    => '0755',
     }
   }
@@ -133,8 +135,8 @@ class kafka::server(
   svcutils::mixsvc { 'kafka':
     ensure      => $kafka_ensure,
     enable      => true,
-    user        => 'kafka',
-    group       => 'kafka',
+    user        => $user,
+    group       => $group,
     log_dir     => $log_dir,
     home        => $home_dir,
     exec        => "${home_dir}/bin/kafka-server-start.sh /etc/kafka/server.properties",
@@ -142,7 +144,9 @@ class kafka::server(
     environment => 'SCALA_VERSION="2.9.2"',
     require     => [
       File['/etc/kafka/server.properties'],
-      File['/etc/default/kafka']
+      File['/etc/default/kafka'],
+      User[$user],
+      Group[$group]
     ],
   }
 }

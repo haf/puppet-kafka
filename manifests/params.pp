@@ -46,6 +46,8 @@ class kafka::params {
 
     $metrics_dir                     = undef
     $home_dir                        = '/opt/kafka'
+    $user                            = 'kafka'
+    $group                           = 'kafka'
 
     # Kafka package version.
     $version                         = 'installed'
