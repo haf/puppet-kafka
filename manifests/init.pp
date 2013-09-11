@@ -40,8 +40,7 @@
 #                                     package version.  If you override this,
 #                                     the version must be >= 0.8.  Default: installed.
 class kafka(
-  $hosts                           = $kafka::params::hosts,
-
+  $declared_hosts                  = $kafka::params::hosts,
   $zookeeper_hosts                 = $kafka::params::zookeeper_hosts,
   $zookeeper_connection_timeout_ms = $kafka::params::zookeeper_connection_timeout_ms,
   $zookeeper_chroot                = $kafka::params::zookeeper_chroot,
@@ -59,8 +58,11 @@ class kafka(
   $user                            = $kafka::params::user,
   $group                           = $kafka::params::group,
   $home                            = $kafka::params::home_dir
-) inherits kafka::params
-{
+) inherits kafka::params {
+
+  $_kafka = hiera_hash('kafka', { hosts => $declared_hosts })
+  $hosts = $_kafka['hosts']
+
   anchor { 'kafka::start': }
 
   package { 'kafka':
@@ -91,7 +93,11 @@ class kafka(
     owner   => $user,
     group   => $group,
     mode    => '0644',
-    require => Anchor['kafka::start'],
+    require => [
+      Svcutils::Svcuser['kafka'],
+      Group['kafka'],
+      Anchor['kafka::start']
+    ],
     before  => Anchor['kafka::end'],
   }
 
@@ -135,6 +141,7 @@ class kafka(
       Anchor['kafka::start']
     ],
     before  => Anchor['kafka::end'],
+    tag     => 'kafka-server-conf'
   }
 
   anchor { 'kafka::end': }

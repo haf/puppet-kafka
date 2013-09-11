@@ -93,7 +93,8 @@ class kafka::server(
   $group                           = $kafka::group
 
     # Get this broker's id and port out of the $kafka::hosts configuration hash
-  $broker_id = $kafka::hosts[$::fqdn]['id']
+  $hosts     = $kafka::hosts
+  $broker_id = $hosts["$::fqdn"]['id']
 
   # Using a conditional assignment selector with a
   # Hash value results in a puppet syntax error.
@@ -110,7 +111,10 @@ class kafka::server(
   }
   file { '/etc/kafka/server.properties':
     content => template($server_properties_template),
+    tag     => 'kafka-server-conf'
   }
+
+  File <| tag == 'kafka-server-conf' |> ~> Svcutils::Mixsvc['kafka']
 
     # If we are using Kafka Metrics Reporter, ensure
     # that the $metrics_dir exists.

@@ -9,10 +9,10 @@ class kafka::params {
     # does not have a 'port' key set.
     $default_broker_port = 9092
     $hosts = {
-        "${::fqdn}" => {
-            'port' => $default_broker_port,
-            'id'   => 1,
-        },
+      "${::fqdn}" => {
+        'port' => $default_broker_port,
+        'id'   => 1,
+      },
     }
 
     $zookeeper_hosts                 = ['localhost:2181']

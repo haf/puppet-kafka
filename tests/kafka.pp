@@ -1,5 +1,5 @@
 class { 'kafka':
-  hosts => {
+  declared_hosts => {
     "${::fqdn}"               => { 'id' => 1, 'port' => 12345 },
     'kafka-node02.domain.org' => { 'id' => 2 },
   },
