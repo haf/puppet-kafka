@@ -54,6 +54,8 @@
 #
 # $metrics_dir                 - Directory in which to store metrics CSVs.  Default: undef (metrics disabled)
 #
+# $manage_firewall             - enable firewall management
+#
 class kafka::server(
   $enabled                         = true,
   $log_dir                         = $kafka::params::log_dir,
@@ -79,7 +81,8 @@ class kafka::server(
   $metrics_dir                     = $kafka::params::metrics_dir,
 
   $server_properties_template      = $kafka::params::server_properties_template,
-  $default_template                = $kafka::params::default_template
+  $default_template                = $kafka::params::default_template,
+  $manage_firewall                 = hiera('manage_firewalls', false),
 ) inherits kafka::params
 {
   # kafka class must be included before kafka::servver
