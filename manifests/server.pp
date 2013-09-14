@@ -83,6 +83,8 @@ class kafka::server(
   $server_properties_template      = $kafka::params::server_properties_template,
   $default_template                = $kafka::params::default_template,
   $manage_firewall                 = hiera('manage_firewalls', false),
+  $metrics_riemann                 = $kafka::params::metrics_riemann,
+  $metrics_riemann_port            = $kafka::params::metrics_riemann_port
 ) inherits kafka::params
 {
   # kafka class must be included before kafka::servver
@@ -155,5 +157,20 @@ class kafka::server(
       User[$user],
       Group[$group]
     ],
+  }
+
+  if $manage_firewall {
+    firewall { "101 allow kafka_broker:$broker_port":
+      proto  => 'tcp',
+      state  => ['NEW'],
+      dport  => $broker_port,
+      action => 'accept',
+    }
+    firewall { "101 allow kafka_jmx:$jmx_port":
+      proto  => 'tcp',
+      state  => ['NEW'],
+      dport  => $jmx_port,
+      action => 'accept',
+    }
   }
 }

@@ -45,6 +45,8 @@ class kafka::params {
     $log_cleanup_interval_mins       = 1
 
     $metrics_dir                     = undef
+    $metrics_riemann                 = undef
+    $metrics_riemann_port            = 5555
     $home_dir                        = '/opt/kafka'
     $user                            = 'kafka'
     $group                           = 'kafka'
