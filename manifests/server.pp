@@ -141,15 +141,21 @@ class kafka::server(
     default => 'running',
   }
 
-  svcutils::mixsvc { 'kafka':
+  supervisor::service { 'kafka':
     ensure      => $kafka_ensure,
-    enable      => true,
     user        => $user,
     group       => $group,
-    log_dir     => $log_dir,
-    home        => $home_dir,
-    exec        => "java -Xmx1G -Xms1G -server -XX:+UseCompressedOops -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC -Xloggc:/var/log/kafka/kafkaServer-gc.log -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dlog4j.configuration=file:/etc/kafka/log4j.properties -cp :${home_dir}/core/target/scala-2.9.2/kafka_2.9.2-0.8.0-beta1.jar:${home_dir}/core/target/scala-2.9.2/kafka-assembly-0.8.0-beta1-deps.jar:${home_dir}/perf/target/scala-2.9.2/kafka*.jar:${home_dir}/libs/*.jar:${home_dir}/kafka*.jar kafka.Kafka /etc/kafka/server.properties",
-    description => 'Kafka Node',
+    directory   => $home_dir,
+    command     => "java -Xmx1G -Xms1G -server -XX:+UseCompressedOops -XX:+UseParNewGC \
+-XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark \
+-XX:+DisableExplicitGC -Xloggc:/var/log/kafka/kafkaServer-gc.log -verbose:gc -XX:+PrintGCDetails \
+-XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -Dcom.sun.management.jmxremote \
+-Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false \
+-Dlog4j.configuration=file:/etc/kafka/log4j.properties -cp \
+:${home_dir}/core/target/scala-2.9.2/kafka_2.9.2-0.8.0-beta1.jar\
+:${home_dir}/core/target/scala-2.9.2/kafka-assembly-0.8.0-beta1-deps.jar\
+:${home_dir}/perf/target/scala-2.9.2/kafka*.jar:${home_dir}/libs/*.jar:${home_dir}/kafka*.jar \
+kafka.Kafka /etc/kafka/server.properties",
     environment => 'SCALA_VERSION="2.9.2"',
     require     => [
       File['/etc/kafka/server.properties'],

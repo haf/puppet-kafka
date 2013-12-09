@@ -78,12 +78,26 @@ class kafka(
     before  => Anchor['kafka::end'],
   }
 
-  svcutils::svcuser { $user:
+  user { $user:
+    ensure  => 'present',
+    gid     => $group,
+    system  => true,
     home    => $home,
-    group   => $group,
     require => [
-      Group[$group],
-      Anchor['kafka::start']
+      Anchor['kafka::start'],
+      Group[$group]
+    ],
+    before  => Anchor['kafka::end'],
+  }
+
+  file { $home:
+    ensure => directory,
+    owner  => $user,
+    group  => $group,
+    mode   => '0755',
+    require => [
+      Anchor['kafka::start'],
+      User[$user]
     ],
     before  => Anchor['kafka::end'],
   }
