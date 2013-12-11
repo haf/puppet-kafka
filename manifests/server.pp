@@ -82,7 +82,7 @@ class kafka::server(
 
   $server_properties_template      = $kafka::params::server_properties_template,
   $default_template                = $kafka::params::default_template,
-  $manage_firewall                 = hiera('manage_firewalls', false),
+  $manage_firewall                 = hiera('manage_firewall', false),
   $metrics_riemann                 = $kafka::params::metrics_riemann,
   $metrics_riemann_port            = $kafka::params::metrics_riemann_port
 ) inherits kafka::params
