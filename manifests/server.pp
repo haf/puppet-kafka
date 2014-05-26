@@ -84,42 +84,33 @@ class kafka::server(
   $default_template                = $kafka::params::default_template,
   $manage_firewall                 = hiera('manage_firewall', false),
   $metrics_riemann                 = $kafka::params::metrics_riemann,
-  $metrics_riemann_port            = $kafka::params::metrics_riemann_port
+  $metrics_riemann_port            = $kafka::params::metrics_riemann_port,
+  $zookeeper_connection_timeout_ms = $kafka::params::zookeeper_connection_timeout_ms
 ) inherits kafka::params
 {
   # kafka class must be included before kafka::servver
-  Class['kafka'] -> Class['kafka::server']
 
+  require kafka::config
   # define local variables from kafka class for use in ERb template.
-  $zookeeper_hosts                 = $kafka::zookeeper_hosts
-  $zookeeper_connection_timeout_ms = $kafka::zookeeper_connection_timeout_ms
+  #  $zookeeper_hosts                 = $kafka::zookeeper_hosts
+  #$zookeeper_connection_timeout_ms = $kafka::zookeeper_connection_timeout_ms
+
   $zookeeper_chroot                = $kafka::zookeeper_chroot
   $user                            = $kafka::user
   $group                           = $kafka::group
-
-    # Get this broker's id and port out of the $kafka::hosts configuration hash
-  $hosts     = $kafka::hosts
-  $broker_id = $hosts["$::fqdn"]['id']
-
-  # Using a conditional assignment selector with a
-  # Hash value results in a puppet syntax error.
-  # Using an if/else instead.
-  if ($kafka::hosts[$::fqdn]['port']) {
-    $broker_port = $kafka::hosts[$::fqdn]['port']
-  }
-  else {
-    $broker_port = $kafka::params::default_broker_port
-  }
-
+  $broker_id = hiera('kafka::host_id')
+  $broker_port = $kafka::params::default_broker_port
+  $zookeeper_hosts = hiera(kafka::zookeeper_hosts)
   file { '/etc/default/kafka':
     content => template($default_template)
   }
+
   file { '/etc/kafka/server.properties':
     content => template($server_properties_template),
-    tag     => 'kafka-server-conf'
+    #  tag     => 'kafka-server-conf'
   }
 
-  File <| tag == 'kafka-server-conf' |> ~> Svcutils::Mixsvc['kafka']
+  # File <| tag == 'kafka-server-conf' |> ~> Svcutils::Mixsvc['kafka']
 
     # If we are using Kafka Metrics Reporter, ensure
     # that the $metrics_dir exists.
@@ -136,34 +127,39 @@ class kafka::server(
   # We don't want to subscribe to the config files here.
   # It will be better to manually restart Kafka when
   # the config files changes.
-  $kafka_ensure = $enabled ? {
-    false   => 'stopped',
-    default => 'running',
+  #$kafka_ensure = $enabled ? {
+  #  false   => 'absent',
+  #  default => 'present',
+  #}
+
+  service { 'kafka':
+    ensure => 'running',
+    enable => 'true',
   }
 
-  supervisor::service { 'kafka':
-    ensure      => $kafka_ensure,
-    user        => $user,
-    group       => $group,
-    directory   => $home_dir,
-    command     => "java -Xmx1G -Xms1G -server -XX:+UseCompressedOops -XX:+UseParNewGC \
--XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark \
--XX:+DisableExplicitGC -Xloggc:/var/log/kafka/kafkaServer-gc.log -verbose:gc -XX:+PrintGCDetails \
--XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -Dcom.sun.management.jmxremote \
--Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false \
--Dlog4j.configuration=file:/etc/kafka/log4j.properties -cp \
-:${home_dir}/core/target/scala-2.9.2/kafka_2.9.2-0.8.0-beta1.jar\
-:${home_dir}/core/target/scala-2.9.2/kafka-assembly-0.8.0-beta1-deps.jar\
-:${home_dir}/perf/target/scala-2.9.2/kafka*.jar:${home_dir}/libs/*.jar:${home_dir}/kafka*.jar \
-kafka.Kafka /etc/kafka/server.properties",
-    environment => 'SCALA_VERSION="2.9.2"',
-    require     => [
-      File['/etc/kafka/server.properties'],
-      File['/etc/default/kafka'],
-      User[$user],
-      Group[$group]
-    ],
-  }
+  #  supervisor::service { 'kafka':
+  #  ensure      => 'present',
+  #  user        => $user,
+  #  group       => $group,
+  #  directory   => $home_dir,
+  #  command     => "java -Xmx1G -Xms1G -server -XX:+UseCompressedOops -XX:+UseParNewGC \
+  #-XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark \
+  #-XX:+DisableExplicitGC -Xloggc:/var/log/kafka/kafkaServer-gc.log -verbose:gc -XX:+PrintGCDetails \
+  #-XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -Dcom.sun.management.jmxremote \
+  #-Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false \
+  #-Dlog4j.configuration=file:/etc/kafka/log4j.properties -cp \
+  #:${home_dir}/core/target/scala-2.9.2/kafka_2.9.2-0.8.0-beta1.jar\
+  #:${home_dir}/core/target/scala-2.9.2/kafka-assembly-0.8.0-beta1-deps.jar\
+  #:${home_dir}/perf/target/scala-2.9.2/kafka*.jar:${home_dir}/libs/*.jar:${home_dir}/kafka*.jar \
+  #kafka.Kafka /etc/kafka/server.properties",
+  #   environment => 'SCALA_VERSION="2.9.2"',
+  #  require     => [
+  #    File['/etc/kafka/server.properties'],
+  #    File['/etc/default/kafka'],
+  #    User[$user],
+  #    Group[$group]
+  #  ],
+  #@}
 
   if $manage_firewall {
     firewall { "101 allow kafka_broker:$broker_port":
